@@ -1,0 +1,26 @@
+# Virtual environment
+venv/
+.llfproject/
+__pycache__/
+*.pyc
+*.pyo
+*.sqlite3
+
+# Django logs
+*.log
+
+# Static and media files
+staticfiles/
+media/
+
+# Environment variables
+.env
+.env.local
+
+# VSCode & JetBrains
+.vscode/
+.idea/
+
+# Migrations cache
+**/migrations/*.pyc
+**/migrations/__pycache__/
