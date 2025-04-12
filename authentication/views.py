@@ -48,18 +48,23 @@ class WorkerRegistrationView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsEngineer | IsAdmin]
 
     def post(self, request):
-        serializer = WorkerRegistrationSerializer(data=request.data, context={"request": request})  # Pass request to serializer
-        if serializer.is_valid():
-            user = serializer.save()
-            return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        print('### request ====>', request.data)
+        try:
+            serializer = WorkerRegistrationSerializer(data=request.data, context={"request": request})  # Pass request to serializer
+            if serializer.is_valid():
+                user = serializer.save()
+                return Response('sucess', status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(e)
+            return Response({"error": 'User already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 class LoginView(APIView):
     # permission_classes = [permissions.AllowAny]
     
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
-        print(serializer)
         if serializer.is_valid():
             user = serializer.validated_data['user']
             tokens = get_tokens_for_user(user)
@@ -67,7 +72,7 @@ class LoginView(APIView):
                 'user': UserSerializer(user).data,
                 'tokens': tokens
             })
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response('Invalid Email or Password.', status=status.HTTP_400_BAD_REQUEST)
 
 class UserListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsAdmin | IsEngineer]
@@ -83,9 +88,15 @@ class UserListView(generics.ListAPIView):
 class EngineerWorkersListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsEngineer]  # Only engineers can access
     serializer_class = WorkerListSerializer
+ 
 
     def get_queryset(self):
-        return CustomUser.objects.filter(user_type='worker', created_by=self.request.user)
+        try:
+
+            return CustomUser.objects.filter(user_type='worker', created_by=self.request.user)
+        except Exception as e:
+            print(e)
+            return Response({"error": e}, status=status.HTTP_400_BAD_REQUEST)
 
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
