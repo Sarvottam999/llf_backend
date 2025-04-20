@@ -7,19 +7,24 @@ from .models import CustomUser
 
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
-    list_display = ('id', 'date_joined', 'email', 'worker_id', 'user_type', 'created_by', 'is_staff', 'is_active')
+    list_display = ('id', 'username', 'email', 'worker_id', 'user_type', 'created_by', 'is_staff', 'is_active', 'date_joined')
     list_filter = ('user_type', 'is_staff', 'is_active')
+    
     fieldsets = (
-        (None, {'fields': ('email', 'password', 'worker_id')}),
-        ('Permissions', {'fields': ('user_type', 'is_staff', 'is_active')}),
+        (None, {'fields': ('username', 'email', 'worker_id', 'password')}),
+        ('Permissions', {'fields': ('user_type', 'is_staff', 'is_active', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
+        ('Metadata', {'fields': ('created_by',)}),
     )
+    
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'worker_id', 'password1', 'password2', 'user_type', 'is_staff', 'is_active')
+            'fields': ('username', 'email', 'worker_id', 'password1', 'password2', 'user_type', 'is_staff', 'is_active'),
         }),
     )
-    search_fields = ('email', 'worker_id')
-    ordering = ('email',)
+
+    search_fields = ('username', 'email', 'worker_id')
+    ordering = ('username',)
 
 admin.site.register(CustomUser, CustomUserAdmin)

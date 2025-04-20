@@ -20,3 +20,33 @@ class Machine(models.Model):
 
     def __str__(self):
         return self.name
+
+
+ 
+class InspectionReport(models.Model):
+    machine = models.ForeignKey(Machine, on_delete=models.CASCADE)
+    worker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    due_date = models.DateField()  # When the inspection was expected
+    look = models.TextField()
+    feel = models.TextField()
+    sound = models.TextField()
+    is_escalated = models.BooleanField(default=False)
+
+
+
+class PendingInspection(models.Model):
+    machine = models.ForeignKey(Machine, on_delete=models.CASCADE)
+    date_due = models.DateField()  # The date it was due
+    resolved = models.BooleanField(default=False)  # Updated when inspection is done
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Escalation(models.Model):
+    machine = models.ForeignKey(Machine, on_delete=models.CASCADE)
+    worker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    engineer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='received_escalations')
+    report = models.ForeignKey(InspectionReport, on_delete=models.CASCADE, null=True, blank=True)
+    comment = models.TextField()
+    status = models.CharField(max_length=20, choices=(('pending', 'Pending'), ('resolved', 'Resolved')), default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)

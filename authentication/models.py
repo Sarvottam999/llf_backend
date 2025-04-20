@@ -3,23 +3,30 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.utils import timezone
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, email=None, password=None, worker_id=None, **extra_fields):
+    def create_user(self, email=None, password=None, worker_id=None, username=None, **extra_fields):
         if not email and not worker_id:
             raise ValueError("Either email or worker_id is required")
+        
+        if not username:
+            raise ValueError("Username is required")
+
 
         if email:
             email = self.normalize_email(email)
 
-        user = self.model(email=email, worker_id=worker_id, **extra_fields)
+        user = self.model(email=email, worker_id=worker_id,username=username,  **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, password=None, **extra_fields):
+    def create_superuser(self, email, password=None,username=None,  **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
         extra_fields.setdefault("user_type", "admin")
+
+        if not username:
+            raise ValueError("Superuser must have a username")
 
         return self.create_user(email=email, password=password, **extra_fields)
 
@@ -29,6 +36,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         ("engineer", "Engineer"),
         ("worker", "Worker"),
     )
+
+    username = models.CharField(max_length=150, unique=True)  # REQUIRED for all users
 
     email = models.EmailField(unique=True, null=True, blank=True)  # Email is now optional
     worker_id = models.CharField(max_length=50, unique=True, null=True, blank=True)  # Unique Worker ID
@@ -40,8 +49,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(default=timezone.now)
 
     # Set worker_id as the primary authentication field when email is missing
-    USERNAME_FIELD = "email"  
-    REQUIRED_FIELDS = ["user_type"]
+    USERNAME_FIELD = "username"  # Used for login
+    REQUIRED_FIELDS = ["user_type", "email"]  # only email required here; not used for login, just for creation
 
     objects = CustomUserManager()
 
