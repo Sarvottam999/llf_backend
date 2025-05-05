@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
+from rest_framework.exceptions import ValidationError
 
 CustomUser = get_user_model()
 
@@ -21,12 +23,19 @@ class EngineerRegistrationSerializer(serializers.ModelSerializer):
         fields = ('username', 'email', 'password')
 
     def create(self, validated_data):
-        return CustomUser.objects.create_user(
-            email=validated_data['email'],
-            password=validated_data['password'],
-            username=validated_data['username'],
-            user_type='engineer'
-        )
+        try:
+            user = CustomUser.objects.create_user(
+                email=validated_data['email'],
+                password=validated_data['password'],
+                username=validated_data['username'],
+                user_type='engineer'
+            )
+            return user
+        except IntegrityError as e:
+            raise ValidationError({"detail": "A user with this email or username already exists."})
+        except Exception as e:
+            print(e)
+            raise ValidationError({"detail": str(e)})
 
 
 # 3. Worker Registration

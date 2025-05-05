@@ -28,10 +28,22 @@ class InspectionReport(models.Model):
     worker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
     due_date = models.DateField()  # When the inspection was expected
-    look = models.TextField()
-    feel = models.TextField()
-    sound = models.TextField()
+
+    # Boolean checkboxes for inspection outcome
+    look = models.BooleanField(default=True)
+    feel = models.BooleanField(default=True)
+    sound = models.BooleanField(default=True)
+
+    # Additional comment fields
+    look_comment = models.TextField(blank=True, null=True)
+    feel_comment = models.TextField(blank=True, null=True)
+    sound_comment = models.TextField(blank=True, null=True)
+
     is_escalated = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.machine.name} - {self.worker.username} - {self.due_date}"
+
 
 
 

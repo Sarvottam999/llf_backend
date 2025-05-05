@@ -30,6 +30,7 @@ class MachineWithDueDateSerializer(serializers.ModelSerializer):
     def get_due_date(self, obj):
         # This reads from context if passed, else returns today
         return self.context.get("due_date", now().date())
+        # return getattr(obj, 'due_date', None)  
 
 
 class AddInspectionReportSerializer(ModelSerializer):
@@ -50,3 +51,22 @@ class AddInspectionReportSerializer(ModelSerializer):
 
 
  
+
+#  ============  inspection =======================
+class InspectionReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InspectionReport
+        fields = [
+             'id',
+            'machine',
+            'worker',
+            'timestamp',
+            'due_date',
+            'look',
+            'feel',
+            'sound',
+            'look_comment',
+            'feel_comment',
+            'sound_comment',
+            'is_escalated'
+             ]

@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsAdmin, IsEngineer, IsWorker
 from .models import Machine
-from .serializers import MachineSerializer, AddInspectionReportSerializer, MachineWithDueDateSerializer
+from .serializers import MachineSerializer,   MachineWithDueDateSerializer, InspectionReportSerializer
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework import status, permissions
 from rest_framework.views import APIView
@@ -61,28 +61,23 @@ class MachineCreateView(APIView):
         
         return Response({"success": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
+class MachineDeleteView(APIView):
+    permission_classes = [IsAuthenticated, IsEngineer | IsAdmin]
 
-# class WorkerMachineListView(APIView):
-    # """Workers can only view their assigned machines."""
-    # permission_classes = [IsAuthenticated, IsWorker]
+    def delete(self, request, machine_id):
+        try:
+            machine = Machine.objects.get(id=machine_id)
 
-    # def get(self, request):
-    #     machines = Machine.objects.filter(worker=request.user)
+            # Only the assigned engineer or admin can delete
+            if request.user.user_type == 'engineer' and machine.engineer != request.user:
+                return Response({"error": "You are not authorized to delete this machine."}, status=status.HTTP_403_FORBIDDEN)
 
-    #     if machines.exists():
-    #         serializer = MachineSerializer(machines, many=True)
-    #         return Response({
-    #             "success": True,
-    #             "message": "Machines retrieved successfully.",
-    #             "data": serializer.data
-    #         }, status=200)
-    #     else:
-    #         return Response({
-    #             "success": False,
-    #             "message": "No machines assigned to this worker."
-    #         }, status=404)
+            machine.delete()
+            return Response({"success": True, "message": "Machine deleted successfully."}, status=status.HTTP_200_OK)
 
-    
+        except Machine.DoesNotExist:
+            return Response({"error": "Machine not found."}, status=status.HTTP_404_NOT_FOUND)
+
 class MachineByUser(ListAPIView):
     serializer_class = MachineSerializer
     permission_classes = [IsAuthenticated]
@@ -197,13 +192,7 @@ class MachineDetailView(RetrieveAPIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class AssignWorkerToMachineView(APIView):
-    """
-    Assign a worker to a machine.
-    Payload:
-    {
-        "worker_id": 17
-    }
-    """
+ 
     # permission_classes = [IsAuthenticated, IsEngineeIsAdmin]
 
     def post(self, request):  
@@ -240,6 +229,7 @@ class AssignWorkerToMachineView(APIView):
             status=status.HTTP_200_OK  
         )
 
+
 # =======================   inspectio ==============================
  
 class DashboardSummaryViewSet(APIView):
@@ -250,7 +240,7 @@ class DashboardSummaryViewSet(APIView):
             user = request.user
             today = now().date()
 
-            if user.user_type == 'worker':  # Assuming you have a role field in your CustomUser model
+            if user.user_type == 'worker':  
                 print(f"[INFO] Worker Dashboard Summary requested for: {user}, Date: {today}")
 
                 assigned_machines = Machine.objects.filter(worker=user)
@@ -263,19 +253,39 @@ class DashboardSummaryViewSet(APIView):
                     except Exception as e:
                         print(f"[ERROR] get_due_status failed for machine ID {machine.id}: {e}")
 
+                
+                pending_count1 =  assigned_machines.filter(
+                    inspectionreport__is_escalated=True
+                )
+                print('pending_count1 ==>' , pending_count1)
                 pending_count = PendingInspection.objects.filter(
                     machine__in=assigned_machines,
                     resolved=False
+                ).exclude(
+                    machine__in = pending_count1
                 ).count()
 
-                escalation_count = Escalation.objects.filter(
-                    machine__in=assigned_machines,
-                    worker=user,
-                    status='pending'
-                ).count()
+
+                escalation_count = assigned_machines.filter(
+                        inspectionreport__is_escalated=True
+                    ).count()
+                # result_machines = escalated_qs
+                print(f" ## escalated_qs 11 ==> {escalation_count}")
+                # pending_count = PendingInspection.objects.filter(
+                #     machine__in=pending_count1,
+                #     resolved=False
+                # ).count()
+
+
+                # escalation_count = Escalation.objects.filter(
+                #     machine__in=assigned_machines,
+                #     worker=user,
+                #     status='pending'
+                # ).count()
+                
 
                 return Response({
-                    "role": "worker",
+                    # "role": "worker",
                     "due": due_count,
                     "pending": pending_count,
                     "escalated": escalation_count,
@@ -287,7 +297,6 @@ class DashboardSummaryViewSet(APIView):
                 # Get all machines assigned to workers under this engineer
                 assigned_machines = Machine.objects.filter(engineer=user)
 
-                # total_machines = assigned_machines.count()
                 due_count = 0
                 for machine in assigned_machines:
                     try:
@@ -295,19 +304,15 @@ class DashboardSummaryViewSet(APIView):
                             due_count += 1
                     except Exception as e:
                         print(f"[ERROR] get_due_status failed for machine ID {machine.id}: {e}")
-
                 pending_count = PendingInspection.objects.filter(
                     machine__in=assigned_machines,
                     resolved=False
-                ).count()
-
-                escalation_count = Escalation.objects.filter(
-                    engineer=user,
-                    status='pending'
-                ).count()
-
-                return Response({
-                    "role": "engineer",
+                ).count() 
+                escalation_count = assigned_machines.filter(
+                        inspectionreport__is_escalated=True
+                    ).count()
+                print(f"## escalation_count 21==> {escalation_count}")
+                return Response({ 
                     "due": due_count,
                     "pending": pending_count,
                     "escalated": escalation_count,
@@ -358,37 +363,7 @@ class EngineerMachineAnalyticsView(APIView):
 
 # ---------------  get machines which are due to day ----------------
 
-# class DueMachinesView(APIView):
-#     permission_classes = [IsAuthenticated, IsWorker]
-
-#     def get(self, request):
-#         user = request.user
-#         today = now().date()
-#         print(f"[INFO] Worker Due Machines requested for: {user}, Date: {today}")
-
-#         # 1. Get all machines assigned to this worker
-#         assigned_machines = Machine.objects.filter(worker=user)
-#         print(f"[INFO] Assigned Machines Count: {assigned_machines.count()}")
-
-#         # 2. Filter machines that are due today
-#         due_machines = []
-#         for machine in assigned_machines:
-#             try:
-#                 if get_due_status(machine):
-#                     due_machines.append(machine)
-#             except Exception as e:
-#                 print(f"[ERROR] get_due_status failed for machine ID {machine.id}: {e}")
-
-#         # 3. Return due machines
-#         # serializer = MachineSerializer(due_machines, many=True)
-#         serializer = MachineWithDueDateSerializer(
-#             due_machines,
-#             many=True,
-#             context={"due_date": today}
-#         )
-
-#         return Response(serializer.data, status=status.HTTP_200_OK) 
-
+ 
 
 class DueMachinesView(APIView):
     permission_classes = [IsAuthenticated, IsWorker]
@@ -423,18 +398,35 @@ class DueMachinesView(APIView):
                         machine__in=assigned_machines,
                         resolved=False
                     ).select_related('machine')
-                    result_machines = [pending.machine for pending in pending_qs]
+
+                    # result_machines = assigned_machines.filter(
+                    #     id__in=pending_qs.values_list('machine_id', flat=True).distinct(),
+                    # ).distinct()
+                    results = []
+                    for pending in pending_qs:
+                        serializer = MachineWithDueDateSerializer(
+                            pending.machine,
+                            context={"due_date": pending.date_due}
+                        )
+                        results.append(serializer.data)
+
+                    print(f'### results ==> ', results)
+                    return Response(results, status=status.HTTP_200_OK)
+                    
+
                 except DatabaseError as e:
                     print(f"[DB ERROR] Failed to fetch pending inspections: {e}")
                     return Response({"error": "Unable to fetch pending inspections."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             elif view_type == 'escalated':
                 try:
-                    escalated_qs = Escalation.objects.filter(
-                        worker=user,
-                        status='pending'
-                    ).select_related('machine')
-                    result_machines = [escalation.machine for escalation in escalated_qs]
+                    escalated_qs = assigned_machines.filter(
+                        inspectionreport__is_escalated=True
+                    ).distinct()
+                    result_machines = escalated_qs
+                    print(f" ## escalated_qs ==> {escalated_qs}")
+
+                    
                 except DatabaseError as e:
                     print(f"[DB ERROR] Failed to fetch escalated machines: {e}")
                     return Response({"error": "Unable to fetch escalated machines."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -472,8 +464,10 @@ class MachineScheduleView(APIView):
                 return Response(self.get_daily_schedule(machine, today, month_start, month_end))
             elif machine.inspection_frequency == "weekly":
                 return Response(self.get_weekly_schedule(machine, today, month_start, month_end))
+            elif machine.inspection_frequency == "monthly":
+                return Response(self.get_monthly_schedule(machine, today, month_start, month_end))
             else:
-                return Response({"message": "Monthly schedule not implemented yet"}, status=status.HTTP_501_NOT_IMPLEMENTED)
+                return Response({"message": "Unsupported inspection frequency"}, status=status.HTTP_400_BAD_REQUEST)
         except ValueError:
             return Response({"error": "Invalid month or year provided."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -533,50 +527,180 @@ class MachineScheduleView(APIView):
 
         return schedule
 
-class AddInspectionReportView(APIView):
-    permission_classes = [IsAuthenticated]
-    def post(self, request):  
-        serializer = AddInspectionReportSerializer(data=request.data, context={"request": request})  
-        if serializer.is_valid():  
-            data = serializer.validated_data  
-            machine = data['machine']  
-            worker = request.user  
 
-            # Update status to normal by default unless escalated  
-            machine.status = "abnormal" if data.get("is_escalated") else "normal"  
-            machine.save()
+    def get_monthly_schedule(self, machine, today, start_date, end_date):
+    # You can customize this to use any fixed day, e.g., 1st, 15th, or last day of the month.
+        due_date = end_date  # 1st of the month
 
-            # Resolve PendingInspection if exists  
-            pending = PendingInspection.objects.filter(machine=machine, date_due=now().date(), resolved=False).first()  
-            if pending:  
-                pending.resolved = True  
-                pending.save()
+        if due_date > today:
+            status_label = "scheduled"
+        elif InspectionReport.objects.filter(machine=machine, due_date=due_date).exists():
+            status_label = "completed"
+        elif PendingInspection.objects.filter(machine=machine, date_due=due_date, resolved=False).exists():
+            status_label = "pending"
+        else:
+            status_label = "missed" if due_date < today else "scheduled"
 
-            # Create inspection report  
-            report = InspectionReport.objects.create(  
-                machine=machine,  
-                worker=worker,  
-                look=data['look'],  
-                feel=data['feel'],  
-                sound=data['sound'],  
-                is_escalated=data.get('is_escalated', False),  
-                due_date=get_machine_due_date(machine),  
-            )
-
-            # Create Escalation if needed  
-            if data.get('is_escalated'):  
-                Escalation.objects.create(  
-                    machine=machine,  
-                    worker=worker,  
-                    engineer=machine.engineer,  
-                    report=report,  
-                    comment=data.get('comment', ''),  
-                )
-
-            return Response({"message": "Inspection submitted successfully"}, status=status.HTTP_201_CREATED)  
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return [{
+            "schedule": due_date,
+            "status": status_label
+        }]
 
 
+# class AddInspectionReportView(APIView):
+#     permission_classes = [IsAuthenticated]
+#     def post(self, request):  
+#         serializer = AddInspectionReportSerializer(data=request.data, context={"request": request})  
+#         if serializer.is_valid():  
+#             data = serializer.validated_data  
+#             machine = data['machine']  
+#             worker = request.user  
+
+#             # Update status to normal by default unless escalated  
+#             machine.status = "abnormal" if data.get("is_escalated") else "normal"  
+#             machine.save()
+
+#             # Resolve PendingInspection if exists  
+#             pending = PendingInspection.objects.filter(machine=machine, date_due=now().date(), resolved=False).first()  
+#             if pending:  
+#                 pending.resolved = True  
+#                 pending.save()
+
+#             # Create inspection report  
+#             report = InspectionReport.objects.create(  
+#                 machine=machine,  
+#                 worker=worker,  
+#                 look=data['look'],  
+#                 feel=data['feel'],  
+#                 sound=data['sound'],  
+#                 is_escalated=data.get('is_escalated', False),  
+#                 due_date=get_machine_due_date(machine),  
+#             )
+
+#             # Create Escalation if needed  
+#             if data.get('is_escalated'):  
+#                 Escalation.objects.create(  
+#                     machine=machine,  
+#                     worker=worker,  
+#                     engineer=machine.engineer,  
+#                     report=report,  
+#                     comment=data.get('comment', ''),  
+#                 )
+
+#             return Response({"message": "Inspection submitted successfully"}, status=status.HTTP_201_CREATED)  
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ================= inspection ===============
+# class InspectionReportView(APIView):
+
+#     def post(self, request):
+#         try:
+#             serializer = InspectionReportSerializer(data=request.data)
+#             if serializer.is_valid():
+#                 serializer.save()
+#                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         except Exception as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class InspectionReportView(APIView):
+
+    def post(self, request):
+        try:
+            user = request.user  # Assuming authenticated worker
+            machine_id = request.data.get('machine')
+            due_date = request.data.get('due_date')
+            print('## user ==> ', user, user.id)
+            print('## machine_id ==> ', machine_id)
+            print('## due_date ==> ', due_date)
+
+            try:
+                due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+            if due_date > date.today():
+                return Response({"error": "Due date cannot be in the future."}, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
+            if not machine_id or not due_date:
+                return Response({"error": "Machine ID  and due_date is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Validate machine exists
+            try:
+                machine = Machine.objects.get(id=machine_id)
+            except Machine.DoesNotExist:
+                return Response({"error": "Machine not found."}, status=status.HTTP_404_NOT_FOUND)
+            if machine.worker != user:
+                return Response({"error": "You are not assigned to this machine."}, status=status.HTTP_403_FORBIDDEN)
+
+
+            already_reported = InspectionReport.objects.filter(
+                machine=machine,
+                worker=user,
+                due_date=due_date
+            ).exists()
+
+            if already_reported:
+                return Response({"message": "Inspection already done."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+            # Fetch and validate due date from PendingInspection
+            # try:
+            #     pending_inspection = PendingInspection.objects.get(machine=machine, resolved=False)
+            # except PendingInspection.DoesNotExist:
+            #     return Response({"error": "No pending inspection found for this machine."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create inspection report with automatic fields
+            look = request.data.get("look", True )
+            feel = request.data.get("feel",True )
+            sound = request.data.get("sound", True)
+            print('look and feel and sound ==>', not (look and feel and sound))
+
+
+            data = {
+                "machine": machine.id,
+                "worker": user.id,
+                "due_date": due_date,
+                "look": look,
+                "feel": feel,
+                "sound": sound,
+
+                "look_comment": request.data.get("look_comment"),
+                "feel_comment": request.data.get("feel_comment"),
+                "sound_comment": request.data.get("sound_comment"),
+
+
+                
+                "is_escalated": not (look and feel and sound)
+
+            }
+            print('# data ==>', data)
+
+            serializer = InspectionReportSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+
+                try:
+                    pending = PendingInspection.objects.get(machine=machine, date_due=due_date, resolved=False)
+                    pending.resolved = True
+                    pending.save()
+                except PendingInspection.DoesNotExist:
+                    pass  # Optional: return a warning or silently ignore
+
+
+                # Optionally, mark pending inspection as resolved automatically
+                # pending_inspection.resolved = True
+                # pending_inspection.save()
+
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            print(e)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -596,23 +720,41 @@ def get_due_status(machine):
         return not inspection_done_today  # Due if not done today
     elif machine.inspection_frequency == 'weekly':
         print('in  ==>', 'weekly')
-        # Get the start (Monday) and end (Sunday) of the current week
-        start_of_week = today - timedelta(days=today.weekday())  # Monday
-        end_of_week = start_of_week + timedelta(days=5)          # Sunday
+        # # Get the start (Monday) and end (Sunday) of the current week
+        # start_of_week = today - timedelta(days=today.weekday())  # Monday
+        # end_of_week = start_of_week + timedelta(days=5)          # Sunday
 
+        # inspection_done_this_week = InspectionReport.objects.filter(
+        #     machine=machine,
+        #     timestamp__date__gte=start_of_week,
+        #     timestamp__date__lte=today
+        # ).exists()
+
+        # if inspection_done_this_week:
+        #     return False  # Already inspected this week
+
+        # if today != end_of_week:
+        #     return False  # Not due yet
+
+        # return True  # Due today (last day of the week, no inspection yet)
+
+        # Define the current week (Monday to Saturday)
+        start_of_week = today - timedelta(days=today.weekday())  # Monday
+        end_of_week = start_of_week + timedelta(days=5)  # Saturday
+
+        # Check if inspection has already been done this week
         inspection_done_this_week = InspectionReport.objects.filter(
             machine=machine,
-            timestamp__date__gte=start_of_week,
-            timestamp__date__lte=today
+            timestamp__date__range=(start_of_week, today)
         ).exists()
 
         if inspection_done_this_week:
-            return False  # Already inspected this week
+            return False  # Inspection already done
 
-        if today != end_of_week:
-            return False  # Not due yet
+        if today == end_of_week:
+            return True  # Due today (Saturday) and no inspection yet
 
-        return True  # Due today (last day of the week, no inspection yet)
+        return False  # Not due yet
 
     elif machine.inspection_frequency == 'monthly':
         print('in  ==>', 'monthly')

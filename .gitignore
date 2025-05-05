@@ -15,7 +15,7 @@ media/
 
 # Environment variables
 .env
-.env.local
+!.env.sample
 
 # VSCode & JetBrains
 .vscode/
@@ -24,3 +24,5 @@ media/
 # Migrations cache
 **/migrations/*.pyc
 **/migrations/__pycache__/
+
+ 

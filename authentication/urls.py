@@ -11,6 +11,8 @@ urlpatterns = [
     path('workers/', views.EngineerWorkersListView.as_view(), name='engineer-workers-list'),
     path('logout/', views.LogoutView.as_view(), name='logout'),
     path('user-role/', views.UserRoleView.as_view(), name='user-role'),
+    path('users/<int:user_id>/delete/', views.DeleteUserView.as_view(), name='delete-user'),
+
 
 
 

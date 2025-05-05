@@ -13,6 +13,13 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 
+import os
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -21,12 +28,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-6k5$+fbr65k3porsxai74d-d1r@(q-h!_i37h875rkgj=9iz05"
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1")
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
 
 # Application definition
@@ -56,9 +65,13 @@ REST_FRAMEWORK = {
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),          # longer access token (to reduce frequent logins)
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),        # valid for a month, can be rotated if needed
+    'ROTATE_REFRESH_TOKENS': True,                       # rotate refresh token on each use
+    'BLACKLIST_AFTER_ROTATION': True,                    # prevent reuse of rotated refresh tokens
+    'UPDATE_LAST_LOGIN': True,
 }
+
 AUTHENTICATION_BACKENDS = [
     'authentication.backends.MultiFieldModelBackend',
     'django.contrib.auth.backends.ModelBackend',  # Keep the default as fallback
@@ -106,11 +119,11 @@ DATABASES = {
     # }
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'llf2',
-        'USER': 'sar',
-        'PASSWORD': 'sar',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv('POSTGRES_DB'),
+        'USER': os.getenv('POSTGRES_USER'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+        'HOST': os.getenv('POSTGRES_HOST'),
+        'PORT': os.getenv('POSTGRES_PORT'),
     }
 
 }
