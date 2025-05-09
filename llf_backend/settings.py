@@ -121,7 +121,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "llf_backend.wsgi.application"
 
-
+# Debug database connection
+print(f"##### 1=> DEBUG INFO - DATABASE_URL exists: {os.getenv('DATABASE_URL') is not None}")
+if os.getenv('DATABASE_URL'):
+    print(f"##### 2=> DEBUG INFO - DATABASE_URL value: {os.getenv('DATABASE_URL')[:10]}...")
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 if os.getenv('DATABASE_URL'):
