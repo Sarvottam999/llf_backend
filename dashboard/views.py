@@ -50,9 +50,9 @@ class MachineCreateView(APIView):
 
         # Automatically assign the logged-in engineer
         request.data["engineer"] = user.id
-        print('## user.id ==>', 
-              request.data
-              )
+        # print('## user.id ==>', 
+        #       request.data
+        #       )
 
         serializer = MachineSerializer(data=request.data)
         if serializer.is_valid():
