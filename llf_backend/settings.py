@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # DATABASES = {
 #     'default': dj_database_url.config(
-#         default=os.getenv('DATABASE_URL'),
+#         default=os.environ.get('DATABASE_URL'),
 #         conn_max_age=600
 #     )
 # }
@@ -38,14 +38,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-dev-secret-key")
+SECRET_KEY = os.environ.get("SECRET_KEY", "unsafe-dev-secret-key")
 
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 
 
 
@@ -122,16 +122,16 @@ TEMPLATES = [
 WSGI_APPLICATION = "llf_backend.wsgi.application"
 
 # Debug database connection
-print(f"##### 1=> DEBUG INFO - DATABASE_URL exists: {os.getenv('DATABASE_URL') is not None}")
-if os.getenv('DATABASE_URL'):
-    print(f"##### 2=> DEBUG INFO - DATABASE_URL value: {os.getenv('DATABASE_URL')[:10]}...")
+print(f"##### 1=> DEBUG INFO - DATABASE_URL exists: {os.environ.get('DATABASE_URL') is not None}")
+if os.environ.get('DATABASE_URL'):
+    print(f"##### 2=> DEBUG INFO - DATABASE_URL value: {os.environ.get('DATABASE_URL')[:10]}...")
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-if os.getenv('DATABASE_URL'):
+if os.environ.get('DATABASE_URL'):
     # Use DATABASE_URL for Railway deployment
     DATABASES = {
         'default': dj_database_url.config(
-            default=os.getenv('DATABASE_URL'),
+            default=os.environ.get('DATABASE_URL'),
             conn_max_age=600
         )
     }
@@ -139,11 +139,11 @@ else:
     DATABASES = { 
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('POSTGRES_DB') if DEBUG else os.getenv('DB_NAME'),
-            'USER': os.getenv('POSTGRES_USER') if DEBUG else os.getenv('DB_USER'),
-            'PASSWORD': os.getenv('POSTGRES_PASSWORD') if DEBUG else os.getenv('DB_PASSWORD'),
-            'HOST': os.getenv('POSTGRES_HOST') if DEBUG else os.getenv('DB_HOST'),
-            'PORT': os.getenv('POSTGRES_PORT') if DEBUG else os.getenv('DB_PORT'),
+            'NAME': os.environ.get('POSTGRES_DB') if DEBUG else os.environ.get('DB_NAME'),
+            'USER': os.environ.get('POSTGRES_USER') if DEBUG else os.environ.get('DB_USER'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD') if DEBUG else os.environ.get('DB_PASSWORD'),
+            'HOST': os.environ.get('POSTGRES_HOST') if DEBUG else os.environ.get('DB_HOST'),
+            'PORT': os.environ.get('POSTGRES_PORT') if DEBUG else os.environ.get('DB_PORT'),
         }
 
     }
