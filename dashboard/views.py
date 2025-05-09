@@ -110,7 +110,6 @@ class MachineByUser(ListAPIView):
             }, status=status.HTTP_404_NOT_FOUND)
 
 class EngineerCreatedMachinesView(ListAPIView):
-    print('## = user ##')
 
     serializer_class = MachineSerializer
     permission_classes = [IsAuthenticated]
