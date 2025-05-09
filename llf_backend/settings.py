@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
-# import dj_database_url
+import dj_database_url
 
 import os
 from dotenv import load_dotenv
@@ -124,18 +124,26 @@ WSGI_APPLICATION = "llf_backend.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-DATABASES = { 
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB') if DEBUG else os.getenv('DB_NAME'),
-        'USER': os.getenv('POSTGRES_USER') if DEBUG else os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD') if DEBUG else os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('POSTGRES_HOST') if DEBUG else os.getenv('DB_HOST'),
-        'PORT': os.getenv('POSTGRES_PORT') if DEBUG else os.getenv('DB_PORT'),
+if os.getenv('DATABASE_URL'):
+    # Use DATABASE_URL for Railway deployment
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.getenv('DATABASE_URL'),
+            conn_max_age=600
+        )
     }
+else:
+    DATABASES = { 
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB') if DEBUG else os.getenv('DB_NAME'),
+            'USER': os.getenv('POSTGRES_USER') if DEBUG else os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD') if DEBUG else os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('POSTGRES_HOST') if DEBUG else os.getenv('DB_HOST'),
+            'PORT': os.getenv('POSTGRES_PORT') if DEBUG else os.getenv('DB_PORT'),
+        }
 
-}
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
