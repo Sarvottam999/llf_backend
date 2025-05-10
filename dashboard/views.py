@@ -16,6 +16,9 @@ import calendar
 from authentication.models import CustomUser  # for fetching worker by ID
 from django.db import DatabaseError
 from rest_framework.exceptions import NotFound, ValidationError
+from io import StringIO
+from django.core.management import call_command
+import re
 
 # #########################   machine ##############################
 class MachineListView(APIView):
@@ -794,3 +797,46 @@ def get_machine_due_date(machine):
         last_day = monthrange(today.year, today.month)[1]
         due_date = today.replace(day=last_day)
         return due_date
+
+
+class CheckPendingAPIView(APIView):
+    # Optional: add authentication or a secret token check
+    permission_classes = [IsAuthenticated, IsAdmin]  # Optional
+
+    def post(self, request):
+        days = request.data.get("days")
+        start = request.data.get("start")
+        end = request.data.get("end")
+
+        # Capture stdout/stderr from management command
+        out = StringIO()
+        err = StringIO()
+
+        cmd_options = {
+            'simple': True,  # Disable color codes
+        }
+        if days:
+            cmd_options["days"] = int(days)
+        elif start and end:
+            cmd_options["start"] = start
+            cmd_options["end"] = end
+        else:
+            return Response({"error": "Please provide either 'days' or both 'start' and 'end'."}, status=400)
+
+        try:
+            call_command("check_pending", stdout=out, stderr=err, **cmd_options)
+            return Response({
+                "success": True,
+                "output": out.getvalue()
+            }, status=200)
+        except Exception as e:
+            return Response({
+                "success": False,
+                "error": str(e),
+                "details": err.getvalue()
+            }, status=500)
+
+
+def remove_ansi(text):
+    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+    return ansi_escape.sub('', text)

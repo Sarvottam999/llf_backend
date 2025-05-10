@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import MachineCreateView, EngineerCreatedMachinesView, MachineByUser,MachineDeleteView, MachineDetailView, AssignWorkerToMachineView, DashboardSummaryViewSet, DueMachinesView, MachineScheduleView, EngineerMachineAnalyticsView, InspectionReportView
+from .views import MachineCreateView, EngineerCreatedMachinesView, MachineByUser,MachineDeleteView, MachineDetailView, AssignWorkerToMachineView, DashboardSummaryViewSet, DueMachinesView, MachineScheduleView, EngineerMachineAnalyticsView, InspectionReportView, CheckPendingAPIView
 
 urlpatterns = [
     # path('machines/', MachineListView.as_view(), name='machine-list'),  # Engineers & Admins can view all machines
@@ -20,6 +20,7 @@ urlpatterns = [
 
     path('inspection-reports/', InspectionReportView.as_view(), name='inspection-report-submit'),
 
+    path('check-pending/', CheckPendingAPIView.as_view(), name='check-pending-api'),
 
 
 ]

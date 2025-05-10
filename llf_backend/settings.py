@@ -122,10 +122,6 @@ TEMPLATES = [
 WSGI_APPLICATION = "llf_backend.wsgi.application"
 
 # Debug database connection
-print(f"##### 1=> DEBUG INFO - DATABASE_URL exists: {os.environ.get('DATABASE_URL') is not None}")
-if os.environ.get('DATABASE_URL'):
-    print(f"##### 2=> DEBUG INFO - DATABASE_URL value: {os.environ.get('DATABASE_URL')[:10]}...")
-# Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 if os.environ.get('DATABASE_URL'):
     # Use DATABASE_URL for Railway deployment
@@ -139,11 +135,11 @@ else:
     DATABASES = { 
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DB') if DEBUG else os.environ.get('DB_NAME'),
-            'USER': os.environ.get('POSTGRES_USER') if DEBUG else os.environ.get('DB_USER'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD') if DEBUG else os.environ.get('DB_PASSWORD'),
-            'HOST': os.environ.get('POSTGRES_HOST') if DEBUG else os.environ.get('DB_HOST'),
-            'PORT': os.environ.get('POSTGRES_PORT') if DEBUG else os.environ.get('DB_PORT'),
+            'NAME': os.environ.get('POSTGRES_DB')  ,
+            'USER': os.environ.get('POSTGRES_USER') ,
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD')  ,
+            'HOST': os.environ.get('POSTGRES_HOST')  ,
+            'PORT': os.environ.get('POSTGRES_PORT') ,
         }
 
     }
@@ -182,9 +178,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # STATICFILES_DIRS = [os.path.join(BASE_DIR, "staticfiles")]
+ 
 
 # STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 STATICSTORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
